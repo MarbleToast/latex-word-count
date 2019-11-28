@@ -36,15 +36,25 @@ if debug:
     print("\nStarting text: " + str(lines)+"\n\n")
     
     
-def remove_latex(e, line):
-    if ("{" in e or "[" in e) and e in line:
+def remove_latex(e, line, preserve_contents=False):
+    change = False
+    if debug:
+        print("Looking for "+e+" in line "+line)
+
+    if ("{" in e or "[" in e) and e in line and not preserve_contents:
         start = line.find(e)
-        end = line.find("}")
+        split_line = line[start:]
+        end = split_line.find("}") + start
+        if debug:
+            print("Found "+e+" at char "+str(start)+" to "+str(end))
         line = line.replace(line[start:end+1], "")
-        line = remove_latex(e, line)
+        change = True
     elif e in line:
+        if debug:
+            print("Found "+e)
         line = line.replace(e, "")
-    return line
+        change = True
+    return line, change
 
 
 DEL_LIST = ['\n',
@@ -60,14 +70,29 @@ DEL_LIST = ['\n',
             '\\usepackage{',
             '\\bibliographystyle{',
             '\\bibliography{',
-            '\\maketitle']
+            '\\maketitle',
+            '\\textsuperscript{',
+            ]
+
+PARTIAL_DEL_LIST = ['\\textsuperscript{',
+                    '\\textit{',
+                    '\\texttt{',
+                    '\\',
+                    '}']
     
 lines = lines.splitlines()
 for i in range(len(lines)):
     for e in DEL_LIST:
         if e in lines[i]:
-            lines[i] = remove_latex(e, lines[i])
-        
+            while e in lines[i]:
+                lines[i] = remove_latex(e, lines[i])[0]
+    for e in PARTIAL_DEL_LIST:
+        if e in lines[i]:
+            while e in lines[i]:
+                lines[i] = remove_latex(e, lines[i], True)[0]
+
+
+
 lines = list(filter(None, lines))
 
 lines = " ".join(lines)
